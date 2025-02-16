@@ -20,6 +20,7 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 
 ## Project Structure
 
+```bash
 transformer-from-scratch/
 ├── src/
 │ ├── model/
@@ -35,7 +36,7 @@ transformer-from-scratch/
 ├── notebooks/
 │ └── transformer_demo.ipynb
 └── README.md
-
+```
 
 ## Implementation Details
 
