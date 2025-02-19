@@ -9,19 +9,15 @@ It aims to be:
 - **Customizable**: Users can tweak hyperparameters (e.g., number of layers, hidden size, dropout) to replicate “Base,” “Big,” or smaller variants of the Transformer.  
 - **Practical**: Includes end-to-end scripts for downloading and preprocessing data (e.g., WMT14), training on Apple Silicon (M-series) hardware, and evaluating the model with BLEU scoring.  
 
-By adhering closely to the original design of the Transformer, the package provides an instructive environment for understanding and experimenting with the attention-based sequence modeling techniques pioneered by Vaswani et al.
-
 ## Overview
 
-**Academic-Style Overview**
+The transformer is a neural sequence-to-sequence architecture for sequence transduction tasks such as machine translation. Unlike approaches that rely on recurrent or convolutional layers, the Transformer uses self-attention mechanisms to model long-range dependencies efficiently in both the encoder and decoder. 
 
-In *Attention Is All You Need* (Vaswani et al., 2017), the authors introduce the **Transformer**, a novel neural sequence-to-sequence architecture for sequence transduction tasks such as machine translation. Unlike earlier approaches that relied on recurrent or convolutional layers, the Transformer uses self-attention mechanisms to model long-range dependencies efficiently in both the encoder and decoder. 
-
-Key contributions include:
+Key contributions of the Transformer include:
 
 1. **Scaled Dot-Product Attention**: A mechanism that computes pairwise interactions among tokens with computational cost proportional only to the product of sequence length and embedding dimensionality.  
 2. **Multi-Head Attention**: Multiple independent attention heads capture different aspects or subspaces of a given representation.  
-3. **Positional Encodings**: A fixed, trigonometric-based way to inject sequence-order information into the model, compensating for the lack of recurrent or convolutional structures.
+3. **Positional Encodings**: A way to inject sequence-order information into the model, compensating for the lack of recurrent or convolutional structures.
 
 Empirically, the Transformer achieved state-of-the-art performance on WMT machine translation benchmarks and significantly reduced training time through parallelization.
 
@@ -83,7 +79,7 @@ model = Transformer(
 
 # Training example 
 
-## Downloading the preprocessing the data
+## Downloading & preprocessing the data
 
 ```bash
 python src/data/download_data.py
