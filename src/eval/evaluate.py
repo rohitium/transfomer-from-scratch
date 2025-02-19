@@ -2,33 +2,35 @@
 import torch
 from torch.utils.data import DataLoader
 from src.models.transformer import Transformer
-from src.data.dataset import TranslationDataset
+from src.train.train import TranslationDataset, Vocabulary
 import sacrebleu
 import sentencepiece as spm
 from tqdm import tqdm
 import os
 
 def generate_subsequent_mask(size):
-    """Generate mask for subsequent positions."""
-    mask = (torch.triu(torch.ones(size, size)) == 1).transpose(0, 1)
-    mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
-    return mask
+    # Returns shape (1, size, size) for easier broadcast
+    mask = torch.triu(torch.ones(size, size), diagonal=1)
+    mask = mask.masked_fill(mask==1, float('-inf'))
+    # shape => (size, size). Now unsqueeze(0) => (1, size, size)
+    return mask.unsqueeze(0) 
 
 def greedy_decode(model, src, device, max_len=50, start_symbol=1, end_symbol=2):
-    """
-    Given a source sequence, generate a target sequence (greedy).
-    """
     model.eval()
     src = src.to(device)
-    memory = model.encoder(src)
-    ys = torch.ones(src.size(0), 1, dtype=torch.long).fill_(start_symbol).to(device)
+    memory = model.encoder(src)  # (1, T_src, d_model) if batch=1
+    ys = torch.ones(src.size(0), 1, dtype=torch.long, device=device).fill_(start_symbol)
 
     for i in range(max_len):
-        tgt_mask = generate_subsequent_mask(ys.size(1)).to(device)
-        out = model.decoder(ys, memory, tgt_mask=tgt_mask)
-        prob = out[:, -1, :]
-        next_word = torch.argmax(prob, dim=1).unsqueeze(1)
+        T = ys.size(1)
+        # Build a (T, T) causal mask, then expand to (1, 1, T, T)
+        tgt_mask_2d = torch.triu(torch.ones(T, T), diagonal=1).bool().to(device)
+        tgt_mask_4d = tgt_mask_2d.unsqueeze(0)  # (1, T, T)
+        
+        out = model.decoder(ys, memory, tgt_mask=tgt_mask_4d)
+        next_word = torch.argmax(out[:, -1, :], dim=1).unsqueeze(1)
         ys = torch.cat([ys, next_word], dim=1)
+
         if (next_word == end_symbol).all():
             break
     return ys
@@ -61,28 +63,49 @@ def main():
     sp = spm.SentencePieceProcessor()
     sp.load("data/processed/sp_bpe.model")
 
-    # Load model
-    model_config = {
-        'SRC_VOCAB_SIZE': 32000,
-        'TGT_VOCAB_SIZE': 32000,
-        'D_MODEL': 512,
-        'NUM_HEADS': 8,
-        'D_FF': 2048,
-        'NUM_LAYERS': 6,
-        'DROPOUT': 0.1
-    }
+    # ------------------------------------------------------------------
+    # REBUILD THE SAME VOCABULARIES USED IN TRAINING
+    # ------------------------------------------------------------------
+    print("Rebuilding vocabulary from training data...")
+    src_vocab = Vocabulary()
+    tgt_vocab = Vocabulary()
+
+    train_en_path = "data/processed/train.en.bpe"
+    train_de_path = "data/processed/train.de.bpe"
     
+    with open(train_en_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            for token in line.strip().split():
+                src_vocab.add_token(token)
+    
+    with open(train_de_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            for token in line.strip().split():
+                tgt_vocab.add_token(token)
+
+    actual_src_vocab_size = len(src_vocab)  # e.g., 15303
+    actual_tgt_vocab_size = len(tgt_vocab)  # e.g., 22890
+    
+    print(f"Source vocab size: {actual_src_vocab_size}")
+    print(f"Target vocab size: {actual_tgt_vocab_size}")
+
+    # ------------------------------------------------------------------
+    # CREATE THE TRANSFORMER MODEL WITH EXACT SAME DIMS AS TRAINING
+    # ------------------------------------------------------------------
     model = Transformer(
-        model_config['SRC_VOCAB_SIZE'],
-        model_config['TGT_VOCAB_SIZE'],
-        model_config['D_MODEL'],
-        model_config['NUM_HEADS'],
-        model_config['D_FF'],
-        model_config['NUM_LAYERS'],
-        model_config['DROPOUT']
+        src_vocab_size=actual_src_vocab_size,
+        tgt_vocab_size=actual_tgt_vocab_size,
+        d_model=256,
+        num_heads=4,
+        d_ff=1024,
+        num_layers=4,
+        dropout=0.1
     ).to(device)
     
-    model.load_state_dict(torch.load("checkpoints/transformer_base.pth", map_location=device))
+    # Load checkpoint
+    ckpt_path = "checkpoints/transformer_base.pth"
+    print(f"Loading model weights from {ckpt_path} ...")
+    model.load_state_dict(torch.load(ckpt_path, map_location=device))
     model.eval()
 
     # Prepare test set

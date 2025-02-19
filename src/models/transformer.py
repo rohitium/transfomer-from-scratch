@@ -117,7 +117,7 @@ class DecoderLayer(nn.Module):
 
 
 class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, max_len=5000):
+    def __init__(self, d_model, max_len=15000):
         super().__init__()
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
@@ -186,7 +186,11 @@ class Transformer(nn.Module):
         self.encoder = TransformerEncoder(src_vocab_size, d_model, num_heads, d_ff, num_layers, dropout)
         self.decoder = TransformerDecoder(tgt_vocab_size, d_model, num_heads, d_ff, num_layers, dropout)
 
-    def forward(self, src, tgt, src_mask=None, tgt_mask=None, memory_mask=None):
+    def forward(self, src, tgt, src_mask=None, tgt_mask=None):
+        """
+        src_mask: 4D encoder mask of shape (B, 1, T_src, T_src),
+        tgt_mask: 4D decoder mask of shape (B, 1, T_tgt, T_tgt).
+        """
         enc_output = self.encoder(src, mask=src_mask)
-        out = self.decoder(tgt, enc_output, tgt_mask, memory_mask)
+        out = self.decoder(tgt, enc_output, tgt_mask=tgt_mask)
         return out

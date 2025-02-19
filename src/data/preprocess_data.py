@@ -61,11 +61,13 @@ def encode_with_sentencepiece(sp_model_path, input_file, output_file):
             pieces = sp.encode(line.strip(), out_type=str)
             fout.write(" ".join(pieces) + "\n")
 
-def split_parallel_data(raw_dir, output_dir, train_ratio=0.98, val_ratio=0.01):
+def split_parallel_data(raw_dir, output_dir, train_ratio=0.98, val_ratio=0.01, max_sentences=100000):
     """
     Split the combined parallel data into train/validation/test sets.
+    Args:
+        max_sentences: Maximum number of sentence pairs to use (default: 100k pairs)
     """
-    print("Creating train/validation/test splits...")
+    print(f"Creating train/validation/test splits (max {max_sentences:,} sentences)...")
     os.makedirs(output_dir, exist_ok=True)
     
     # Define the parallel files from our downloaded dataset
@@ -90,6 +92,15 @@ def split_parallel_data(raw_dir, output_dir, train_ratio=0.98, val_ratio=0.01):
             for en_line, de_line in zip(en_f, de_f):
                 en_sentences.append(en_line.strip())
                 de_sentences.append(de_line.strip())
+                if len(en_sentences) >= max_sentences:
+                    break
+        if len(en_sentences) >= max_sentences:
+            break
+    
+    # Trim to max_sentences if needed
+    if len(en_sentences) > max_sentences:
+        en_sentences = en_sentences[:max_sentences]
+        de_sentences = de_sentences[:max_sentences]
     
     # Calculate split sizes
     total_size = len(en_sentences)
@@ -116,17 +127,21 @@ def split_parallel_data(raw_dir, output_dir, train_ratio=0.98, val_ratio=0.01):
         
         print(f"Created {split_name} split with {end-start} sentence pairs")
 
-def process_data(raw_dir="data/raw", processed_dir="data/processed", vocab_size=32000):
+def process_data(raw_dir="data/raw", processed_dir="data/processed", 
+                vocab_size=32000, max_sentences=100000):
     """
     Complete data processing pipeline:
     1. Split data into train/valid/test
     2. Train SentencePiece model
     3. Encode all splits with SentencePiece
+    
+    Args:
+        max_sentences: Maximum number of sentence pairs to use (default: 100k pairs)
     """
     os.makedirs(processed_dir, exist_ok=True)
     
     # Create data splits
-    split_parallel_data(raw_dir, processed_dir)
+    split_parallel_data(raw_dir, processed_dir, max_sentences=max_sentences)
     
     # Combine all training data for BPE training
     combined_file = os.path.join(processed_dir, "combined_corpus.txt")
@@ -152,4 +167,5 @@ def process_data(raw_dir="data/raw", processed_dir="data/processed", vocab_size=
     print("\nData processing complete!")
 
 if __name__ == "__main__":
-    process_data()
+    # Use 100k sentence pairs by default
+    process_data(max_sentences=100000)

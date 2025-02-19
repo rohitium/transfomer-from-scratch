@@ -1,21 +1,40 @@
 # Transformer from Scratch
 
-This project implements the Transformer architecture as described in the paper ["Attention Is All You Need"](https://arxiv.org/abs/1706.03762) (Vaswani et al., 2017). The implementation is optimized for Mac M3 Max machines using PyTorch.
+This project is an **open-source re-implementation** of the Transformer as described in the paper ["Attention Is All You Need"](https://arxiv.org/abs/1706.03762) (Vaswani et al., 2017). 
+
+It aims to be:
+
+- **Minimal**: The code closely follows the paper’s structure (multi-head attention, positional encodings, encoder-decoder design), providing an educational framework rather than a heavily optimized production library.
+- **Modular**: Separate modules handle data preprocessing, model definition, training loops, and evaluation routines to promote clarity and extensibility.
+- **Customizable**: Users can tweak hyperparameters (e.g., number of layers, hidden size, dropout) to replicate “Base,” “Big,” or smaller variants of the Transformer.  
+- **Practical**: Includes end-to-end scripts for downloading and preprocessing data (e.g., WMT14), training on Apple Silicon (M-series) hardware, and evaluating the model with BLEU scoring.  
+
+By adhering closely to the original design of the Transformer, the package provides an instructive environment for understanding and experimenting with the attention-based sequence modeling techniques pioneered by Vaswani et al.
 
 ## Overview
 
-The Transformer is a revolutionary architecture that relies entirely on self-attention mechanisms to compute representations of its input and output, replacing traditional recurrent neural networks. This implementation provides a clear, educational approach to understanding the core concepts.
+**Academic-Style Overview**
+
+In *Attention Is All You Need* (Vaswani et al., 2017), the authors introduce the **Transformer**, a novel neural sequence-to-sequence architecture for sequence transduction tasks such as machine translation. Unlike earlier approaches that relied on recurrent or convolutional layers, the Transformer uses self-attention mechanisms to model long-range dependencies efficiently in both the encoder and decoder. 
+
+Key contributions include:
+
+1. **Scaled Dot-Product Attention**: A mechanism that computes pairwise interactions among tokens with computational cost proportional only to the product of sequence length and embedding dimensionality.  
+2. **Multi-Head Attention**: Multiple independent attention heads capture different aspects or subspaces of a given representation.  
+3. **Positional Encodings**: A fixed, trigonometric-based way to inject sequence-order information into the model, compensating for the lack of recurrent or convolutional structures.
+
+Empirically, the Transformer achieved state-of-the-art performance on WMT machine translation benchmarks and significantly reduced training time through parallelization.
 
 ## Requirements
 
-- Python 3.9+
-- PyTorch 2.0+ (with MPS support for M3 Max)
+- Python 3.10+
+- PyTorch 2.6.0+ (with MPS support for M3 Max)
 - NumPy
 - tqdm
-- matplotlib (for visualization)
 
 ```bash
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/mps
+conda env create -f environment.yml
+conda activate transformer_m3
 ```
 
 ## Project Structure
@@ -23,38 +42,26 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 ```bash
 transformer-from-scratch/
 ├── src/
+│ ├── data/
+│ │ ├── __init__.py
+│ │ ├── download_data.py
+│ │ └── preprocess_data.py
 │ ├── model/
-│ │ ├── attention.py
-│ │ ├── encoder.py
-│ │ ├── decoder.py
+│ │ ├── __init__.py
 │ │ └── transformer.py
+│ ├── train/
+│ │ ├── __init__.py
+│ │ └── train.py
+│ ├── eval/
+│ │ ├── __init__.py
+│ │ └── evaluate.py
 │ ├── utils/
-│ │ ├── data_loader.py
-│ │ └── visualization.py
+│ │ └── __init__.py
 │ └── train.py
-├── tests/
-├── notebooks/
-│ └── transformer_demo.ipynb
+├── environment.yml
+├── LICENSE
 └── README.md
 ```
-
-## Implementation Details
-
-The implementation includes the following key components:
-
-1. **Multi-Head Attention**
-   - Scaled dot-product attention
-   - Parallel attention heads
-   - Linear projections for queries, keys, and values
-
-2. **Position-wise Feed-Forward Networks**
-   - Two linear transformations with ReLU activation
-
-3. **Positional Encoding**
-   - Sinusoidal position encoding
-   - Learnable position embeddings (optional)
-
-4. **Layer Normalization and Residual Connections**
 
 ## Usage
 
@@ -63,7 +70,6 @@ The implementation includes the following key components:
 ```python
 
 from src.models.transformer import Transformer
-
 
 # Initialize the model
 model = Transformer(
@@ -77,16 +83,12 @@ model = Transformer(
 
 # Training example 
 
-### Using MPS Acceleration
+## Downloading the preprocessing the data
 
-This implementation is optimized for Mac M3 Max using PyTorch's MPS (Metal Performance Shaders) backend:
-
-```python
-import torch
-device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
-model = model.to(device)
+```bash
+python src/data/download_data.py
+python src/data/preprocess_data.py
 ```
-
 
 ## Training
 
@@ -94,16 +96,17 @@ To train the model:
 
 ```bash
 
-python src/train.py --batch_size 32 --epochs 100 --lr 0.0001
+python src.train.train
 ```
 
+## Evaluating the model
 
-## Performance
+To evaluate the model:
 
-On a Mac M3 Max, you can expect the following performance metrics:
-- Training speed: ~X samples/second
-- Memory usage: ~Y GB
-- Training time for standard translation task: ~Z hours
+```bash
+
+python src.eval.evaluate
+```
 
 ## Contributing
 
@@ -126,13 +129,6 @@ volume={30},
 year={2017}
 } 
 ```
-
-
-## Acknowledgments
-
-- The original Transformer paper authors
-- PyTorch team for MPS support
-- Open-source community
 
 ## Contact
 
